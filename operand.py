@@ -68,3 +68,19 @@ class Operand:
             return Operand([math.log(self.polynomial[0], base)])
         else:
             raise ValueError("Unacceptable base for logarithm")
+
+    def varstring(self, varname):
+        result = ""
+        if self.polynomial[0] != 0:
+            coef = self.polynomial[0]
+            coef = math.floor(coef) if coef == math.floor(coef) else coef
+            coef = str(coef) if coef != 1 else ""
+            result += coef
+        if len(self.polynomial) > 1:
+            if result:
+                result += "+"
+            coef = self.polynomial[1]
+            coef = math.floor(coef) if coef == math.floor(coef) else coef
+            coef = str(coef) if coef != 1 else ""
+            result += coef + varname
+        return result

@@ -2,7 +2,8 @@ from solver import *
 
 solver = Solver()
 expression = input()
-print(solver.solve(expression))
 while expression != "":
+    solution = solver.solve(expression)
+    if solution is not None:
+        print(solution)
     expression = input()
-    print(solver.solve(expression))
