@@ -69,6 +69,12 @@ class Operand:
         else:
             raise ValueError("Unacceptable base for logarithm")
 
+    def __str__(self):
+        return self.polynomial
+
+    def __repr__(self):
+        return str(self.polynomial)
+
     def varstring(self, varname):
         result = ""
         if self.polynomial[0] != 0:

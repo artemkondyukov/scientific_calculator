@@ -8,10 +8,11 @@ class Solver:
         self.operators = {"+": lambda x, y: x + y,
                           "-": lambda x, y: x - y,
                           "*": lambda x, y: x * y,
-                          "/": lambda x, y: x / y}
-        self.op_precedences = {"+": 0, "-": 0, "*": 1, "/": 1}
+                          "/": lambda x, y: x / y,
+                          "~": lambda x: Operand([0]) - x}  # Unary '-' operator
+        self.op_precedences = {"+": 0, "-": 0, "*": 1, "/": 1, "~": 2}
 
-        self.functions = {"log": lambda x, y: x.log(y),
+        self.functions = {"log": lambda x, y: y.log(x),
                           "ln": lambda x: x.log(Operand([math.e]))}
 
         self.varname = ""
@@ -27,10 +28,83 @@ class Solver:
                 expr = expr[:m.end() - 1] + "*" + expr[m.end() - 1:]
 
         expr = re.sub(r'((?<=\d)([A-Za-z(]))', r'*\1', expr)  # Add implicit multiplication
-        expr = re.sub(r'([(),*/+=-])', r' \1 ', expr)  # Add spaces around operators
+        expr = re.sub(r'([(),*/+=~-])', r' \1 ', expr)  # Add spaces around operators
         expr = re.sub(r'([A-Za-z]+)', r' \1 ', expr)  # Add spaces around variables and functions
         expr = re.sub(r'(\s{2,})', r' ', expr)  # Remove excess spaces
         return expr.split()
+
+    def check_correctness(self, token_array):
+        """
+        Constructs PDA for checking whether arithmetic expression is valid
+        :param token_array: the value obtained from tokenize function
+        :return: True if the expression is correct
+        """
+        PDA_states = {0: "operator", 1: "operand", 2: "parenthesis"}
+        PDA_stack = []
+        current_state = 1
+        for i, token in enumerate(token_array):
+            if token.count(".") > 1:
+                print("Error: invalid number: %s" % token)
+                return False
+            if PDA_states[current_state] == "operand":
+                if token in self.functions:
+                    PDA_stack.append(token)
+                    PDA_stack.append("(")
+                    for _ in range(self.functions[token].__code__.co_argcount - 1):
+                        PDA_stack.append("A")
+                    current_state = 2
+                elif token.replace(".", "").isalnum():
+                    if token.isalpha():
+                        if self.varname == "":
+                                self.varname = token
+                        else:
+                            if token != self.varname:
+                                print("Several names for variable: %s and %s" % (token, self.varname))
+                                return False
+                    current_state = 0
+                elif token == "-":
+                    if len(PDA_stack) > 0 and PDA_stack[-1] == "-":
+                        print("Two unary '-' found for one operand")
+                        return False
+                    PDA_stack.append("-")
+                    token_array[i] = '~'  # Replace usual '-' with unary -
+                elif token == "(":
+                    PDA_stack.append("(")
+                else:  # token == "," or token == ")" or token in self.operators:
+                    print("Expected operand but '%s' is given" % token)
+                    return False
+
+            elif PDA_states[current_state] == "operator":
+                if token in self.operators:
+                    current_state = 1
+                elif token == ",":
+                    if len(PDA_stack) == 0:
+                        print("Error: ',' is put out of a function")
+                        return False
+                    elif PDA_stack[-1] == "(":
+                        print("Error: unbalanced parentheses")
+                        return False
+                    elif PDA_stack[-1] == "A":
+                        PDA_stack.pop()
+                        current_state = 1
+                elif token == ")":
+                    if len(PDA_stack) == 0 or PDA_stack[-1] != "(":
+                        print("Error: unbalanced parentheses")
+                        return False
+                    PDA_stack.pop()
+                    if len(PDA_stack) > 0 and PDA_stack[-1] in self.functions:
+                        PDA_stack.pop()
+                else:  # token == "(" or token.replace(".", "").isalnum():
+                    print("Error: expected operator, but '%s' is given" % token)
+                    return False
+
+            elif PDA_states[current_state] == "parenthesis":
+                if token == "(":
+                    current_state = 1
+                else:
+                    print("Error: '(' expected after function name, but '%s' is given" % token)
+                    return False
+        return True
 
     def convert_to_postfix(self, token_array):
         """
@@ -40,25 +114,8 @@ class Solver:
         """
         result = []
         stack = []
-        argcount_stack = [0]
         for token in token_array:
-            if token.isalpha() and token not in self.functions:
-                argcount_stack[-1] = 1 if argcount_stack[-1] == 0 else argcount_stack[-1]
-                result.append(token)
-
-            elif '.' in token:
-                if not token.replace('.', '').isnumeric():
-                    print("Error: point placed out of a number")
-                    return
-                else:
-                    argcount_stack[-1] = 1 if argcount_stack[-1] == 0 else argcount_stack[-1]
-                    if token.count('.') > 1:
-                        print("Error: wrong number format: " + token)
-                        return
-                    result.append(token)
-
-            elif token.isnumeric():
-                argcount_stack[-1] = 1 if argcount_stack[-1] == 0 else argcount_stack[-1]
+            if token.replace(".", "").isalnum() and token not in self.functions:
                 result.append(token)
 
             elif token in self.operators:
@@ -68,37 +125,21 @@ class Solver:
                 stack.append(token)
 
             elif token in self.functions:
-                argcount_stack[-1] = 1 if argcount_stack[-1] == 0 else argcount_stack[-1]
                 stack.append(token)
 
             elif token == "(":
-                argcount_stack.append(0)
                 stack.append(token)
 
             elif token == ")":
                 while len(stack) > 0 and stack[-1] != "(":
                     result.append(stack.pop())
-                if len(stack) == 0:
-                    print("Error: unbalanced parentheses")
-                    return
-                if argcount_stack[-1] == 0:
-                    print("Error: no operands in parentheses")
-                    return
                 stack.pop()  # Get rid of left parenthesis
                 if len(stack) > 0 and stack[-1] in self.functions:
-                    if self.functions[stack[-1]].__code__.co_argcount != argcount_stack[-1]:
-                        print("Error: invalid number of arguments for function %s" % stack[-1])
-                        return
                     result.append(stack.pop())
-                    argcount_stack.pop()
 
             elif token == ",":
-                argcount_stack[-1] += 1
                 while len(stack) > 0 and stack[-1] != "(":
                     result.append(stack.pop())
-                if len(stack) == 0:
-                    print("Error: argument separator is put out of a function")
-                    return
 
         while len(stack) > 0:
             if stack[-1] in list("()"):
@@ -126,22 +167,18 @@ class Solver:
                         return
 
             elif element in self.operators:
-                try:
-                    right_op = operand_stack.pop()
-                except IndexError:
-                    print("No operands for operator ", element)
-                    return
-                try:
-                    left_op = operand_stack.pop()
-                except IndexError:
-                    if element == "-":
-                        left_op = Operand([0])
-                    else:
-                        print("Attempt to use operator '%s' as unary" % element)
+                print(operand_stack)
+                argcount = self.operators[element].__code__.co_argcount
+                operands = []
+                for i in range(argcount):
+                    try:
+                        operands.append(operand_stack.pop())
+                    except IndexError:
+                        print("Not enough arguments for operator %s" % element)
                         return
 
                 try:
-                    operand_stack.append(self.operators[element](left_op, right_op))
+                    operand_stack.append(self.operators[element](*operands[::-1]))
                 except NotImplementedError as e:
                     print(e.args[0])
                     return
@@ -160,15 +197,10 @@ class Solver:
                         return
 
                 try:
-                    operand_stack.append(self.functions[element](*operands))
+                    operand_stack.append(self.functions[element](*operands[::-1]))
                 except NotImplementedError as e:
                     print(e.args[0])
                     return
-
-        if len(operand_stack) > 1:
-            print("Error: there is no operator between %s and %s" %
-                  (operand_stack[0].varstring(self.varname), operand_stack[1].varstring(self.varname)))
-            return
 
         return operand_stack[0].polynomial
 
@@ -189,7 +221,8 @@ class Solver:
                     if not tokenized:
                         print(tag + " part contains nothing")
                         return
-
+                    if not self.check_correctness(tokenized):
+                        return
                     postfix = self.convert_to_postfix(tokenized)
                     if postfix is None:
                         return
@@ -199,9 +232,12 @@ class Solver:
                     else:
                         polynomial.extend(tmp_polynomial)
 
+            print(polynomial_left, polynomial_right)
             polynomial = (Operand(polynomial_left) - Operand(polynomial_right)).polynomial
         else:
             tokenized = self.tokenize(expression)
+            if not self.check_correctness(tokenized):
+                return
             postfix = self.convert_to_postfix(tokenized)
             if postfix is None:
                 return
