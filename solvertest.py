@@ -27,7 +27,7 @@ class SolverTest(unittest.TestCase):
         solver = Solver()
         strlen = random.randint(0, 30)
         possible_chars = list("1234567890-+=*/.,()logn")
-        for i in range(1000):
+        for i in range(100000):
             random_string = ''.join(random.choice(possible_chars) for _ in range(strlen))
             print(random_string)
             solver.solve(random_string)

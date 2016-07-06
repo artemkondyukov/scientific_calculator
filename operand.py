@@ -11,18 +11,30 @@ class Operand:
     def __add__(self, other):
         if len(self.polynomial) < len(other.polynomial):
             tmp_self = self.polynomial + [0] * (len(other.polynomial) - len(self.polynomial))
-            return Operand(list(map(lambda t: t[0] + t[1], zip(tmp_self, other.polynomial))))
+            result = list(map(lambda t: t[0] + t[1], zip(tmp_self, other.polynomial)))
+            while len(result) > 1 and result[-1] == 0:
+                result.pop()
+            return Operand(result)
         else:
             tmp_other = other.polynomial + [0] * (len(self.polynomial) - len(other.polynomial))
-            return Operand(list(map(lambda t: t[0] + t[1], zip(self.polynomial, tmp_other))))
+            result = list(map(lambda t: t[0] + t[1], zip(self.polynomial, tmp_other)))
+            while len(result) > 1 and result[-1] == 0:
+                result.pop()
+            return Operand(result)
 
     def __sub__(self, other):
         if len(self.polynomial) < len(other.polynomial):
             tmp_self = self.polynomial + [0] * (len(other.polynomial) - len(self.polynomial))
-            return Operand(list(map(lambda t: t[0] - t[1], zip(tmp_self, other.polynomial))))
+            result = list(map(lambda t: t[0] - t[1], zip(tmp_self, other.polynomial)))
+            while len(result) > 1 and result[-1] == 0:
+                result.pop()
+            return Operand(result)
         else:
             tmp_other = other.polynomial + [0] * (len(self.polynomial) - len(other.polynomial))
-            return Operand(list(map(lambda t: t[0] - t[1], zip(self.polynomial, tmp_other))))
+            result = list(map(lambda t: t[0] - t[1], zip(self.polynomial, tmp_other)))
+            while len(result) > 1 and result[-1] == 0:
+                result.pop()
+            return Operand(result)
 
     def __mul__(self, other):
         result = [0] * (len(self.polynomial) + len(other.polynomial) - 1)
@@ -32,6 +44,8 @@ class Operand:
                        [0] * (len(result) - len(other.polynomial))
 
             result = [r + t for r, t in zip(result, tmp_poly)]
+        while len(result) > 1 and result[-1] == 0:
+            result.pop()
         return Operand(result)
 
     def __truediv__(self, other):
@@ -46,7 +60,10 @@ class Operand:
             dividend -= Operand([coef]) * other * Operand([0] *
                                                           (len(dividend.polynomial) - len(other.polynomial)) + [1])
             dividend.polynomial.pop()
-        return Operand(result[::-1])
+        result = result[::-1]
+        while len(result) > 1 and result[-1] == 0:
+            result.pop()
+        return Operand(result)
 
     def __eq__(self, other):
         if len(self.polynomial) != len(other.polynomial):

@@ -1,7 +1,6 @@
 import re
 
-from operand import *
-
+from expressionchecker import *
 
 class Solver:
     def __init__(self):
@@ -28,6 +27,7 @@ class Solver:
                 expr = expr[:m.end() - 1] + "*" + expr[m.end() - 1:]
 
         expr = re.sub(r'((?<=\d)([A-Za-z(]))', r'*\1', expr)  # Add implicit multiplication
+        expr = re.sub(r'(^|\()-([A-Za-z0-9])', r'\1~\2', expr)  # Replace usual - with unary operator
         expr = re.sub(r'([(),*/+=~-])', r' \1 ', expr)  # Add spaces around operators
         expr = re.sub(r'([A-Za-z]+)', r' \1 ', expr)  # Add spaces around variables and functions
         expr = re.sub(r'(\s{2,})', r' ', expr)  # Remove excess spaces
@@ -39,71 +39,14 @@ class Solver:
         :param token_array: the value obtained from tokenize function
         :return: True if the expression is correct
         """
-        PDA_states = {0: "operator", 1: "operand", 2: "parenthesis"}
-        PDA_stack = []
-        current_state = 1
-        for i, token in enumerate(token_array):
-            if token.count(".") > 1:
-                print("Error: invalid number: %s" % token)
-                return False
-            if PDA_states[current_state] == "operand":
-                if token in self.functions:
-                    PDA_stack.append(token)
-                    PDA_stack.append("(")
-                    for _ in range(self.functions[token].__code__.co_argcount - 1):
-                        PDA_stack.append("A")
-                    current_state = 2
-                elif token.replace(".", "").isalnum():
-                    if token.isalpha():
-                        if self.varname == "":
-                                self.varname = token
-                        else:
-                            if token != self.varname:
-                                print("Several names for variable: %s and %s" % (token, self.varname))
-                                return False
-                    current_state = 0
-                elif token == "-":
-                    if len(PDA_stack) > 0 and PDA_stack[-1] == "-":
-                        print("Two unary '-' found for one operand")
-                        return False
-                    PDA_stack.append("-")
-                    token_array[i] = '~'  # Replace usual '-' with unary -
-                elif token == "(":
-                    PDA_stack.append("(")
-                else:  # token == "," or token == ")" or token in self.operators:
-                    print("Expected operand but '%s' is given" % token)
-                    return False
-
-            elif PDA_states[current_state] == "operator":
-                if token in self.operators:
-                    current_state = 1
-                elif token == ",":
-                    if len(PDA_stack) == 0:
-                        print("Error: ',' is put out of a function")
-                        return False
-                    elif PDA_stack[-1] == "(":
-                        print("Error: unbalanced parentheses")
-                        return False
-                    elif PDA_stack[-1] == "A":
-                        PDA_stack.pop()
-                        current_state = 1
-                elif token == ")":
-                    if len(PDA_stack) == 0 or PDA_stack[-1] != "(":
-                        print("Error: unbalanced parentheses")
-                        return False
-                    PDA_stack.pop()
-                    if len(PDA_stack) > 0 and PDA_stack[-1] in self.functions:
-                        PDA_stack.pop()
-                else:  # token == "(" or token.replace(".", "").isalnum():
-                    print("Error: expected operator, but '%s' is given" % token)
-                    return False
-
-            elif PDA_states[current_state] == "parenthesis":
-                if token == "(":
-                    current_state = 1
-                else:
-                    print("Error: '(' expected after function name, but '%s' is given" % token)
-                    return False
+        checker = ExpressionChecker(operators=self.operators,
+                                    operator_precedences=self.op_precedences,
+                                    functions=self.functions)
+        for token in token_array:
+            result = checker.consume_token(token)
+            if result is not None:
+                print(result)
+                return
         return True
 
     def convert_to_postfix(self, token_array):
@@ -142,9 +85,6 @@ class Solver:
                     result.append(stack.pop())
 
         while len(stack) > 0:
-            if stack[-1] in list("()"):
-                print("Error: unbalanced parentheses")
-                return
             result.append(stack.pop())
 
         return result
@@ -167,7 +107,6 @@ class Solver:
                         return
 
             elif element in self.operators:
-                print(operand_stack)
                 argcount = self.operators[element].__code__.co_argcount
                 operands = []
                 for i in range(argcount):
@@ -216,10 +155,10 @@ class Solver:
                 polynomial_left = []
                 polynomial_right = []
                 for expr, polynomial, tag in \
-                        zip([left_part, right_part], [polynomial_left, polynomial_right], ["left", "right"]):
+                        zip([left_part, right_part], [polynomial_left, polynomial_right], ["Left", "Right"]):
                     tokenized = self.tokenize(expr)
                     if not tokenized:
-                        print(tag + " part contains nothing")
+                        print(tag + " part contains nothing.")
                         return
                     if not self.check_correctness(tokenized):
                         return
@@ -232,7 +171,6 @@ class Solver:
                     else:
                         polynomial.extend(tmp_polynomial)
 
-            print(polynomial_left, polynomial_right)
             polynomial = (Operand(polynomial_left) - Operand(polynomial_right)).polynomial
         else:
             tokenized = self.tokenize(expression)
@@ -246,6 +184,11 @@ class Solver:
                 return
 
         if len(polynomial) == 1:
+            if '=' in expression:
+                print("The expression doesn't have a variable "
+                      "(or the coefficient before it is 0), but "
+                      "has a '=' sign. It cannot be interpreted.")
+                return
             num_result = polynomial[0] if math.floor(polynomial[0]) != polynomial[0] else math.floor(polynomial[0])
             return str(num_result)
         elif len(polynomial) == 2:
