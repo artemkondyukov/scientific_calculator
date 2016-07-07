@@ -34,7 +34,11 @@ class Solver:
                 return
 
         solver = PolynomialSolver()
-        result = solver.solve(polynomial)
+        try:
+            result = solver.solve(polynomial)[0]
+        except NotImplementedError as e:
+            print(e.args[0])
+            return
         if result[1] == 0:
             if '=' in expression:
                 print("The expression doesn't have a variable "
