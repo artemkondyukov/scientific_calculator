@@ -1,15 +1,13 @@
-from operand import *
 from pda import PDA
 
 
 class ExpressionChecker(PDA):
-    def __init__(self, operators, operator_precedences, functions):
+    def __init__(self, operators, functions):
         """
         Creates an arithmetic expression checker based on push-down automaton
         It has three states: awaiting operand, awaiting operator and awaiting parenthesis (after function)
         By now supports expressions with only variable
         :param operators: a dictionary (operator_name: string, operator_function: function)
-        :param operator_precedences: a dictionary (operator_name: string, operator_priority: int)
         :param functions: a dictionary (function_name: string, function_body: function)
         :return:
         """
@@ -19,7 +17,6 @@ class ExpressionChecker(PDA):
         super().__init__(states, current_state="operand")
 
         self.operators = operators
-        self.op_precedences = operator_precedences
         self.functions = functions
         self.variable_name = ""
 
@@ -73,4 +70,30 @@ class ExpressionChecker(PDA):
         if token == "(":
             self.current_state = "operand"
         else:
-            return "Error: '(' expected after function name, but '%s' is given" % token
+            return "Error: '(' is expected after a function name, but '%s' is given" % token
+
+    def consume_token_array(self, token_array):
+        """
+        Checks whether a string given belongs to the language recognized by a PDA
+        :param token_array:
+        :return: None if a string does belong and error string otherwise
+        """
+        for token in token_array:
+            if token.count(".") > 1:
+                return "Error: invalid number: %s" % token
+            result = self.consume_token(token)
+            if result is not None:
+                return result
+        if self.current_state == "parenthesis":
+            return "Error: '(' is expected after a function name, but end of the expression reached."
+        if self.current_state == "operand":
+            return "Error: operand is expected, but end of the expression reached."
+        if len(self.stack) > 0:
+            if self.stack[-1] == "(":
+                return "Unbalanced parentheses"
+            elif self.stack[-1] == "A":
+                last_function_name = ""
+                for i in range(1, len(self.stack) + 1):
+                    if self.stack[-i] in self.functions:
+                        last_function_name = self.stack[-i]
+                return "Not enough arguments for function %s" % last_function_name

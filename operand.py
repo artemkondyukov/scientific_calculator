@@ -95,15 +95,15 @@ class Operand:
     def varstring(self, varname):
         result = ""
         if self.polynomial[0] != 0:
-            coef = self.polynomial[0]
-            coef = math.floor(coef) if coef == math.floor(coef) else coef
-            coef = str(coef) if coef != 1 else ""
-            result += coef
+            coefficient = self.polynomial[0]
+            coefficient = math.floor(coefficient) if coefficient == math.floor(coefficient) else coefficient
+            coefficient = str(coefficient) if coefficient != 1 else ""
+            result += coefficient
         if len(self.polynomial) > 1:
             if result:
                 result += "+"
-            coef = self.polynomial[1]
-            coef = math.floor(coef) if coef == math.floor(coef) else coef
-            coef = str(coef) if coef != 1 else ""
-            result += coef + varname
+            coefficient = self.polynomial[1]
+            coefficient = math.floor(coefficient) if coefficient == math.floor(coefficient) else coefficient
+            coefficient = str(coefficient) if coefficient != 1 else ""
+            result += coefficient + varname
         return result
