@@ -15,7 +15,10 @@ class PostfixExpression:
 
         self.functions = {"log": lambda x, y: y.log(x),
                           "ln": lambda x: x.log(Operand([math.e]))}
-        self.status = ""    # Last error in case of incorrect expression
+
+        self.token_places = []  # An array of tuples (start_pos, end_pos) of tokens.
+        self.error_msg = ""    # Last error in case of incorrect expression
+        self.error_place = -1  # Index of incorrect token
         self.varname = ""
 
     def tokenize(self, expr):
@@ -23,17 +26,24 @@ class PostfixExpression:
         :param expr: the expression to process
         :return: an array of tokens from the string given
         """
-        match = re.finditer(r'([A-Za-z]+)\(', expr)  # Add implicit multiplication
+        result = expr
+        match = re.finditer(r'([A-Za-z]+)\(', result)  # Add implicit multiplication
         for m in match:
             if m.group(0)[:-1] not in self.functions:  # if we found a variable
-                expr = expr[:m.end() - 1] + "*" + expr[m.end() - 1:]
+                result = result[:m.end() - 1] + "*" + result[m.end() - 1:]
 
-        expr = re.sub(r'((?<=\d)([A-Za-z(]))', r'*\1', expr)  # Add implicit multiplication
-        expr = re.sub(r'(^|\()-([A-Za-z0-9])', r'\1~\2', expr)  # Replace usual - with unary operator
-        expr = re.sub(r'([(),*/+=~-])', r' \1 ', expr)  # Add spaces around operators
-        expr = re.sub(r'([A-Za-z]+)', r' \1 ', expr)  # Add spaces around variables and functions
-        expr = re.sub(r'(\s{2,})', r' ', expr)  # Remove excess spaces
-        return expr.split()
+        result = re.sub(r'((?<=\d)([A-Za-z(]))', r'*\1', result)  # Add implicit multiplication
+        result = re.sub(r'(^|\()-([A-Za-z0-9])', r'\1~\2', result)  # Replace usual - with unary operator
+        result = re.sub(r'([(),*/+=~-])', r' \1 ', result)  # Add spaces around operators
+        result = re.sub(r'([A-Za-z]+)', r' \1 ', result)  # Add spaces around variables and functions
+        result = re.sub(r'(\s{2,})', r' ', result)  # Remove excess spaces
+        result = result.split()
+        for token in result:
+            start_pos = expr.index(token)
+            end_pos = start_pos + len(token) - 1
+            self.token_places.append((start_pos, end_pos))
+            expr = expr[end_pos+1:]
+        return result
 
     def is_expression_correct(self, token_array):
         """
@@ -43,9 +53,10 @@ class PostfixExpression:
         """
         checker = ExpressionChecker(operators=self.operators,
                                     functions=self.functions)
-        result = checker.consume_token_array(token_array)
+        result, error_place = checker.consume_token_array(token_array)
         if result is not None:
-            self.status = result
+            self.error_msg = result
+            self.error_place = self.token_places[error_place]
             return False
         return True
 
@@ -58,6 +69,7 @@ class PostfixExpression:
         result = []
         stack = []
         for token in token_array:
+            print(token)
             if token.replace(".", "").isalnum() and token not in self.functions:
                 result.append(token)
 
@@ -96,7 +108,6 @@ class PostfixExpression:
         :return: an Operand
         """
         operand_stack = []
-        print(postfix_array)
         for element in postfix_array:
             if element not in self.operators and element not in self.functions:
                 try:
@@ -119,10 +130,10 @@ class PostfixExpression:
                 try:
                     operand_stack.append(self.operators[element](*operands[::-1]))
                 except NotImplementedError as e:
-                    self.status = e.args[0]
+                    self.error_msg = e.args[0]
                     return
                 except ZeroDivisionError:
-                    self.status = "Division by zero detected!"
+                    self.error_msg = "Division by zero detected!"
                     return
 
             elif element in self.functions:
@@ -134,7 +145,7 @@ class PostfixExpression:
                 try:
                     operand_stack.append(self.functions[element](*operands[::-1]))
                 except NotImplementedError as e:
-                    self.status = e.args[0]
+                    self.error_msg = e.args[0]
                     return
 
         return operand_stack[0]
@@ -147,12 +158,12 @@ class PostfixExpression:
         """
         tokenized = self.tokenize(infix_string)
         if not tokenized:
-            raise ValueError("Expression contains nothing")
+            raise ValueError("Expression contains nothing. ")
         if not self.is_expression_correct(tokenized):
-            raise ValueError("Expression is incorrect. " + self.status)
+            raise ValueError("Expression is incorrect. " + self.error_msg)
         postfix_array = self.convert_to_postfix(tokenized)
         print(postfix_array)
         result = self.process_postfix_array(postfix_array)
         if result is None:
-            raise ValueError("Unable to perform calculations. " + self.status)
+            raise ValueError("Unable to perform calculations. " + self.error_msg)
         return result

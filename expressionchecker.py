@@ -76,24 +76,28 @@ class ExpressionChecker(PDA):
         """
         Checks whether a string given belongs to the language recognized by a PDA
         :param token_array:
-        :return: None if a string does belong and error string otherwise
+        :return: (None, None) if a string does belong and tuple (error string, token number) otherwise
+        if an error appears at the end of a token array, instead of token number -1 is returned
         """
-        for token in token_array:
+        for i, token in enumerate(token_array):
             if token.count(".") > 1:
-                return "Error: invalid number: %s" % token
+                return "Error: invalid number: %s" % token, i
             result = self.consume_token(token)
             if result is not None:
-                return result
+                return result, i
         if self.current_state == "parenthesis":
-            return "Error: '(' is expected after a function name, but end of the expression reached."
+            return "Error: '(' is expected after a function name, but end of the expression reached.", -1
         if self.current_state == "operand":
-            return "Error: operand is expected, but end of the expression reached."
+            return "Error: operand is expected, but end of the expression reached.", -1
         if len(self.stack) > 0:
             if self.stack[-1] == "(":
-                return "Unbalanced parentheses"
+                return "Unbalanced parentheses", self.stack[::-1].index("(")
             elif self.stack[-1] == "A":
-                last_function_name = ""
+                last_function_name, idx = "", -1
                 for i in range(1, len(self.stack) + 1):
                     if self.stack[-i] in self.functions:
                         last_function_name = self.stack[-i]
-                return "Not enough arguments for function %s" % last_function_name
+                        idx = len(self.stack) - i - 1
+                        break
+                return "Not enough arguments for function %s" % last_function_name, idx
+        return None, None
