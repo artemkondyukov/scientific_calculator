@@ -1,0 +1,53 @@
+body {
+    font-family: "Helvetica Neue", sans-serif;
+    background: url("background.jpg");
+    background-size: cover;
+    font-style: normal;
+    font-size: 20px;
+    line-height: 25px;
+}
+
+div#expression_line {
+    alignment: center;
+    width: 600px;
+    margin: 150px auto auto;
+}
+
+p.comment {
+    margin-bottom: 0;
+    color: #555;
+    font-size: small;
+}
+
+p.value {
+    margin: 0;
+    padding: 0 10px;
+}
+
+div.output {
+    background-color: lightblue;
+    border: 1px solid darkgray;
+    border-radius: 2px;
+    width: 600px;
+    padding: 5px 10px;
+    margin: 20px auto auto;
+}
+
+input#expression {
+    width: 80%;
+    font-size: large;
+    margin: 5px 10px;
+}
+
+input[type=submit] {
+    background-color: darkolivegreen;
+    border: none;
+    color: white;
+    font-size: large;
+    padding: 5px 10px;
+    margin: auto;
+}
+
+#mistake {
+    color: red;
+}
