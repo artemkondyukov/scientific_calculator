@@ -1,7 +1,29 @@
 <!doctype html>
 <title>Scientific calculator</title>
-{% if name %}
-  <h1>Hello {{ name }}!</h1>
-{% else %}
-  <h1>Hello, World!</h1>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+<div id="expression_line">
+    <form method="POST" action="{{ url_for('index') }}">
+        <input id="expression" type="text" name="expression">
+        <input id="solve" type="submit" value="Solve"/>
+    </form>
+</div>
+
+{% if explanation %}
+<div class="output">
+    <p class="comment"> Interpreted expression: </p>
+    <p class="value">
+        <span>{{ before_mistake }}</span>
+        <span id="mistake">{{ mistake }}</span>
+        <span>{{ after_mistake }}</span>
+    </p>
+    <p class="comment"> Explanation: </p>
+    <p class="value"> {{ explanation }} </p>
+</div>
+{% elif solution %}
+<div class="output">
+    <p class="comment"> Given expression: </p>
+    <p class="value"> {{ expression }} </p>
+    <p class="comment"> Output: </p>
+    <p class="value"> {{ solution }} </p>
+</div>
 {% endif %}
