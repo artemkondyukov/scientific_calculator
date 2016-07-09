@@ -16,9 +16,10 @@ class PostfixExpression:
         self.functions = {"log": lambda x, y: y.log(x),
                           "ln": lambda x: x.log(Operand([math.e]))}
 
+        self.interpreted_expression = ""
         self.token_places = []  # An array of tuples (start_pos, end_pos) of tokens.
         self.error_msg = ""    # Last error in case of incorrect expression
-        self.error_place = -1  # Index of incorrect token
+        self.error_place = (-1, -1)  # Index of incorrect token
         self.varname = ""
 
     def tokenize(self, expr):
@@ -38,11 +39,12 @@ class PostfixExpression:
         result = re.sub(r'([A-Za-z]+)', r' \1 ', result)  # Add spaces around variables and functions
         result = re.sub(r'(\s{2,})', r' ', result)  # Remove excess spaces
         result = result.split()
+        self.interpreted_expression = "".join(result)
+        start_pos = 0
         for token in result:
-            start_pos = expr.index(token)
             end_pos = start_pos + len(token) - 1
             self.token_places.append((start_pos, end_pos))
-            expr = expr[end_pos+1:]
+            start_pos = end_pos + 1
         return result
 
     def is_expression_correct(self, token_array):
@@ -69,7 +71,6 @@ class PostfixExpression:
         result = []
         stack = []
         for token in token_array:
-            print(token)
             if token.replace(".", "").isalnum() and token not in self.functions:
                 result.append(token)
 
@@ -144,8 +145,8 @@ class PostfixExpression:
 
                 try:
                     operand_stack.append(self.functions[element](*operands[::-1]))
-                except NotImplementedError as e:
-                    self.error_msg = e.args[0]
+                except Exception as e:
+                    self.error_msg = e.args[0].capitalize()
                     return
 
         return operand_stack[0]
@@ -160,10 +161,9 @@ class PostfixExpression:
         if not tokenized:
             raise ValueError("Expression contains nothing. ")
         if not self.is_expression_correct(tokenized):
-            raise ValueError("Expression is incorrect. " + self.error_msg)
+            raise ValueError(self.error_msg)
         postfix_array = self.convert_to_postfix(tokenized)
-        print(postfix_array)
         result = self.process_postfix_array(postfix_array)
         if result is None:
-            raise ValueError("Unable to perform calculations. " + self.error_msg)
+            raise ValueError(self.error_msg)
         return result
