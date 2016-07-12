@@ -7,6 +7,11 @@ class Operand:
     def __init__(self, polynomial):
         self.polynomial = []
         self.polynomial.extend(list(polynomial))
+        while len(self.polynomial) > 1:
+            if self.polynomial[-1] == 0:
+                self.polynomial.pop()
+            else:
+                break
 
     def __add__(self, other):
         if len(self.polynomial) < len(other.polynomial):
@@ -90,7 +95,7 @@ class Operand:
             raise ValueError("Unacceptable base for logarithm")
 
     def __str__(self):
-        return self.polynomial
+        return str(self.polynomial)
 
     def __repr__(self):
         return str(self.polynomial)
@@ -100,13 +105,14 @@ class Operand:
         if self.polynomial[0] != 0:
             coefficient = self.polynomial[0]
             coefficient = math.floor(coefficient) if coefficient == math.floor(coefficient) else coefficient
-            coefficient = str(coefficient) if coefficient != 1 else ""
-            result += coefficient
-        if len(self.polynomial) > 1:
-            if result:
-                result += "+"
+            result += str(coefficient)
+        if len(self.polynomial) == 2:
+            if result != "":
+                result += " + "
             coefficient = self.polynomial[1]
             coefficient = math.floor(coefficient) if coefficient == math.floor(coefficient) else coefficient
             coefficient = str(coefficient) if coefficient != 1 else ""
             result += coefficient + varname
+        elif len(self.polynomial) > 2:
+            raise NotImplementedError("Degrees higher than 1 aren't implemented yet")
         return result
