@@ -54,12 +54,15 @@ class Operand:
 
         dividend = Operand(self.polynomial)
         result = []
-        while len(dividend.polynomial) >= len(other.polynomial):
+        while len(dividend.polynomial) > len(other.polynomial):
             coef = dividend.polynomial[-1] / other.polynomial[-1]
             result += [coef]
             dividend -= Operand([coef]) * other * Operand([0] *
                                                           (len(dividend.polynomial) - len(other.polynomial)) + [1])
-            dividend.polynomial.pop()
+
+        coef = dividend.polynomial[-1] / other.polynomial[-1]
+        result += [coef]
+
         result = result[::-1]
         while len(result) > 1 and result[-1] == 0:
             result.pop()
