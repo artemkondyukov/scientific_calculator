@@ -5,7 +5,7 @@ from operand import *
 
 
 class PostfixExpression:
-    def __init__(self):
+    def __init__(self, infix_expression):
         self.operators = {"+": lambda x, y: x + y,
                           "-": lambda x, y: x - y,
                           "*": lambda x, y: x * y,
@@ -16,13 +16,14 @@ class PostfixExpression:
         self.functions = {"log": lambda x, y: y.log(x),
                           "ln": lambda x: x.log(Operand([math.e]))}
 
-        self.interpreted_expression = ""
+        self.interpreted_expression = None
         self.token_places = []  # An array of tuples (start_pos, end_pos) of tokens.
-        self.error_msg = ""    # Last error in case of incorrect expression
-        self.error_place = (-1, -1)  # Index of incorrect token
-        self.varname = ""
+        self.error_msg = None    # Last error in case of incorrect expression
+        self.error_place = (None, None)  # Index of incorrect token
+        self.varname = None
+        self.result = self.__process_infix_string(infix_expression)
 
-    def tokenize(self, expr):
+    def __tokenize(self, expr):
         """
         :param expr: the expression to process
         :return: an array of tokens from the string given
@@ -41,13 +42,16 @@ class PostfixExpression:
         result = result.split()
         self.interpreted_expression = "".join(result)
         start_pos = 0
+
+        self.token_places = []
         for token in result:
             end_pos = start_pos + len(token) - 1
             self.token_places.append((start_pos, end_pos))
             start_pos = end_pos + 1
+        print(self.token_places)
         return result
 
-    def is_expression_correct(self, token_array):
+    def __is_expression_correct(self, token_array):
         """
         Constructs PDA for checking whether arithmetic expression is valid
         :param token_array: the value obtained from tokenize function
@@ -59,10 +63,11 @@ class PostfixExpression:
         if result is not None:
             self.error_msg = result
             self.error_place = self.token_places[error_place]
+            print(error_place)
             return False
         return True
 
-    def convert_to_postfix(self, token_array):
+    def __convert_to_postfix(self, token_array):
         """
         An implementation of Shunting-yard algorithm for arithmetic expression parsing
         :param token_array
@@ -102,25 +107,27 @@ class PostfixExpression:
 
         return result
 
-    def process_postfix_array(self, postfix_array):
+    def __process_postfix_array(self, postfix_array):
         """
         Does all calculation within an expression
         :param postfix_array: an array of tokens in postfix form
         :return: an Operand
         """
         operand_stack = []
-        for element in postfix_array:
+        for i, element in enumerate(postfix_array):
             if element not in self.operators and element not in self.functions:
                 try:
                     operand_stack.append(Operand([float(element)]))
                 except ValueError:
-                    if self.varname == "":
+                    if self.varname is None:
                         self.varname = element
                         operand_stack.append(Operand([0., 1.]))
                     elif self.varname == element:
                         operand_stack.append(Operand([0., 1.]))
                     else:
-                        raise ValueError("Error: several names for variable: %s and %s" % (self.varname, element))
+                        self.error_msg = "Error: several names for variable: %s and %s" % (self.varname, element)
+                        self.error_place = self.token_places[i]
+                        return
 
             elif element in self.operators:
                 argcount = self.operators[element].__code__.co_argcount
@@ -132,9 +139,11 @@ class PostfixExpression:
                     operand_stack.append(self.operators[element](*operands[::-1]))
                 except NotImplementedError as e:
                     self.error_msg = e.args[0]
+                    self.error_place = -1, -1
                     return
                 except ZeroDivisionError:
                     self.error_msg = "Division by zero detected!"
+                    self.error_place = -1, -1
                     return
 
             elif element in self.functions:
@@ -147,23 +156,29 @@ class PostfixExpression:
                     operand_stack.append(self.functions[element](*operands[::-1]))
                 except Exception as e:
                     self.error_msg = e.args[0].capitalize()
+                    self.error_place = -1, -1
                     return
 
         return operand_stack[0]
 
-    def process_infix_string(self, infix_string):
+    def __process_infix_string(self, infix_string):
         """
         Does all processing required (tokenize, rewrite in postfix form and evaluate postfix)
         :param infix_string:
         :return: an Operand representing the result of a calculation
         """
-        tokenized = self.tokenize(infix_string)
+        tokenized = self.__tokenize(infix_string)
         if not tokenized:
-            raise ValueError("Expression contains nothing. ")
-        if not self.is_expression_correct(tokenized):
-            raise ValueError(self.error_msg)
-        postfix_array = self.convert_to_postfix(tokenized)
-        result = self.process_postfix_array(postfix_array)
+            self.error_msg = "Expression contains nothing"
+            return
+        if not self.__is_expression_correct(tokenized):
+            return
+        postfix_array = self.__convert_to_postfix(tokenized)
+        result = self.__process_postfix_array(postfix_array)
         if result is None:
-            raise ValueError(self.error_msg)
+            return
         return result
+
+    def get_error(self):
+        if self.error_msg is not None:
+            return self.error_msg, self.error_place
