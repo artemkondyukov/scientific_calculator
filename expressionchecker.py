@@ -1,4 +1,8 @@
+from itertools import compress, count, islice
+from functools import partial
+from operator import eq
 from pda import PDA
+import re
 
 
 class ExpressionChecker(PDA):
@@ -27,8 +31,18 @@ class ExpressionChecker(PDA):
         :return: (None, None) if a string does belong and tuple (error string, token number) otherwise
         if an error appears at the end of a token array, instead of token number -1 is returned
         """
-        print(token_array)
+
+        def nth_item(num, item, iterable):
+            indices = compress(count(), map(partial(eq, item), iterable))
+            return next(islice(indices, num, None), -1)
+
+        self.current_state = "operand"
+        self.stack = []
+        self.variable_name = ""
+
         for i, token in enumerate(token_array):
+            if len(re.findall(r"[^A-Za-z0-9+~\-*/.,()]", token)) != 0:
+                raise ValueError("Unallowed character in token array: %s.", token)
             if token.count(".") > 1:
                 return "Error: invalid number.", i
             result = self.consume_token(token)
@@ -40,7 +54,9 @@ class ExpressionChecker(PDA):
             return "Error: operand is expected, but the end of the expression reached.", -1
         if len(self.stack) > 0:
             if self.stack[-1] == "(":
-                return "Unbalanced parentheses.", len(token_array) - token_array[::-1].index("(") - 1
+                n = token_array.count("(") - token_array.count(")") - 1
+                pos = nth_item(n, "(", token_array)
+                return "Error: unbalanced parentheses.", pos
             elif self.stack[-1] == "A":
                 last_function_name, idx = "", -1
                 for i in range(1, len(self.stack) + 1):
@@ -48,7 +64,7 @@ class ExpressionChecker(PDA):
                         last_function_name = self.stack[-i]
                         idx = len(self.stack) - i - 1
                         break
-                return "Not enough arguments for function %s." % last_function_name, idx
+                return "Error: wrong number of arguments for function %s." % last_function_name, idx
         return None, None
 
     def __state_operator(self, token):
@@ -60,14 +76,17 @@ class ExpressionChecker(PDA):
             elif self.stack[-1] == "(":
                 if len(self.stack) > 1:
                     if self.stack[-2] in self.functions:
-                        return "Error: wrong number of arguments for function %s" % self.stack[-2]
-                return "Error: unbalanced parentheses."
+                        return "Error: wrong number of arguments for function %s." % self.stack[-2]
+                return "Error: ',' is put out of a function."
             elif self.stack[-1] == "A":
                 self.stack.pop()
                 self.current_state = "operand"
         elif token == ")":
-            if len(self.stack) == 0 or self.stack[-1] != "(":
+            if len(self.stack) == 0:
                 return "Error: unbalanced parentheses."
+            if self.stack[-1] == "A":
+                last_function = [token for token in self.stack[::-1] if token in self.functions][0]
+                return "Error: wrong number of arguments for function %s." % last_function
             self.stack.pop()
             if len(self.stack) > 0 and self.stack[-1] in self.functions:
                 self.stack.pop()
@@ -87,18 +106,18 @@ class ExpressionChecker(PDA):
                     self.variable_name = token
                 else:
                     if token != self.variable_name:
-                        return "Several names for variable: %s and %s." % (token, self.variable_name)
+                        return "Error: several names for variable: %s and %s." % (self.variable_name, token)
             if len(self.stack) > 0 and self.stack[-1] == "~":
                 self.stack.pop()
             self.current_state = "operator"
         elif token == "~":
             if len(self.stack) > 0 and self.stack[-1] == "~":
-                return "Two unary '-' found for one operand."
+                return "Error: two unary '-' found for one operand."
             self.stack.append("~")
         elif token == "(":
             self.stack.append("(")
         else:
-            return "Expected operand, but '%s' is given." % token
+            return "Error: expected operand, but '%s' is given." % token
 
     def __state_parenthesis(self, token):
         if token == "(":
