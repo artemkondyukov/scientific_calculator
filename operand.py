@@ -55,7 +55,7 @@ class Operand:
 
     def __truediv__(self, other):
         if len(other.polynomial) > len(self.polynomial):
-            raise NotImplementedError("Negative degrees aren't implemented yet")
+            raise NotImplementedError("Error: negative degrees aren't implemented yet.")
 
         dividend = Operand(self.polynomial)
         result = []
@@ -83,16 +83,24 @@ class Operand:
 
     def log(self, base):
         if len(self.polynomial) > 1:
-            raise NotImplementedError("Logarithms are supported only for plain numbers")
+            raise NotImplementedError("Error: logarithms are supported only for plain numbers.")
 
         if isinstance(base, Operand):
             if len(base.polynomial) > 1:
-                raise NotImplementedError("Logarithms are supported only for plain numbers")
+                raise NotImplementedError("Error: logarithms are supported only for plain numbers.")
+            if base.polynomial[0] <= 0 or base.polynomial[0] == 1:
+                raise ValueError("Error: illegal base for logarithm.")
+            if self.polynomial[0] <= 0:
+                raise ValueError("Error: illegal value for logarithm.")
             return Operand([math.log(self.polynomial[0], base.polynomial[0])])
         elif isinstance(base, float):
+            if base <= 0 or base == 1:
+                raise ValueError("Error: illegal base for logarithm.")
+            if self.polynomial[0] <= 0:
+                raise ValueError("Error: illegal value for logarithm.")
             return Operand([math.log(self.polynomial[0], base)])
         else:
-            raise ValueError("Unacceptable base for logarithm")
+            raise ValueError("Error: unacceptable base for logarithm.")
 
     def __str__(self):
         return str(self.polynomial)
@@ -114,5 +122,5 @@ class Operand:
             coefficient = str(coefficient) if coefficient != 1 else ""
             result += coefficient + varname
         elif len(self.polynomial) > 2:
-            raise NotImplementedError("Degrees higher than 1 aren't implemented yet")
+            raise NotImplementedError("Error: degrees higher than 1 aren't implemented yet.")
         return result
