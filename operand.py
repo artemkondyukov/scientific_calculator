@@ -65,8 +65,13 @@ class Operand:
             except ZeroDivisionError:
                 raise ZeroDivisionError("Error: division by zero.")
             result += [coef]
+            div_len = len(dividend.polynomial)
             dividend -= Operand([coef]) * other * Operand([0] *
                                                           (len(dividend.polynomial) - len(other.polynomial)) + [1])
+
+            # After subtraction the degree of dividend MUST decrease
+            if div_len - len(dividend.polynomial) == 0:
+                dividend.polynomial.pop()
 
         try:
             coef = dividend.polynomial[-1] / other.polynomial[-1]

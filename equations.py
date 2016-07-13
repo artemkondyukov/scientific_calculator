@@ -9,7 +9,7 @@ class Equations:
         :param left_part_string:
         :param right_part_string:
         :return: err_start, err_end, err_message, interpreted_expression in case of any error
-        and (varname, array representation of a polynomial otherwise)
+        and (varname, array representation of a polynomial, interpreted_expression otherwise)
         """
         left_part_string = left_part_string.replace(" ", "")
         right_part_string = right_part_string.replace(" ", "")
@@ -31,8 +31,8 @@ class Equations:
             assert right_operand is not None
         else:
             shift = len(left_interpreted) + 3
-            print(right_side_expression.error_msg)
             pos = right_side_expression.error_place
+            pos = pos if pos != (None, None) else (-1, -1)
             return pos[0] + shift, pos[1] + shift, right_side_expression.error_msg, \
                 left_interpreted + " = " + right_interpreted
 
@@ -53,4 +53,5 @@ class Equations:
                     (left_side_expression.varname, right_side_expression.varname), \
                     left_interpreted + " = " + right_interpreted
 
-        return varname, (left_operand - right_operand).polynomial
+        return varname, (left_operand - right_operand).polynomial, \
+            left_side_expression.interpreted_expression + " = " + right_side_expression.interpreted_expression

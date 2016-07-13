@@ -21,10 +21,13 @@ class CalculatorTest(unittest.TestCase):
         self.assertEqual(evaluate_infix(input_string)[2], exp_output)
 
     def testCase_4(self):
-        strlen = random.randint(0, 30)
         possible_chars = list("1234567890-+=*/.,()logn")
-        for i in range(100000):
+        for i in range(10):
+            strlen = random.randint(0, 30)
             random_string = ''.join(random.choice(possible_chars) for _ in range(strlen))
             print(random_string)
             evaluate_infix(random_string)
         self.assertTrue(True)
+
+if __name__ == "__main__":
+    unittest.main()

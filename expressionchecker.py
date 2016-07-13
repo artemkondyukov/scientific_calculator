@@ -55,7 +55,6 @@ class ExpressionChecker(PDA):
         if len(self.stack) > 0:
             if self.stack[-1] == "(":
                 n = token_array.count("(") - token_array.count(")") - 1
-                print(n)
                 pos = nth_item(n, "(", token_array)
                 return "Error: unbalanced parentheses.", pos
             elif self.stack[-1] == "A":

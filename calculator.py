@@ -37,7 +37,6 @@ def evaluate_infix(expression):
     :return: err_start, err_end, message, interpreted expression in case of any error,
     None, None, solution, interpreted_expression otherwise
     """
-    expression = expression.replace(" ", "").replace("=", " = ")
     pat_unallowed = re.compile(r'([^A-Za-z0-9+\-*/=.,\s()])')
     if len(pat_unallowed.findall(expression)) > 0:
         pos = next(pat_unallowed.finditer(expression)).start()
@@ -52,13 +51,18 @@ def evaluate_infix(expression):
         if len(result) == 4:
             return result
         else:
-            varname = result[0]
-            polynomial = result[1]
+            try:
+                varname = result[0]
+                polynomial = result[1]
+                interpreted_expression = result[2]
+            except (TypeError, IndexError):
+                return -1, -1, "Something has gone terribly wrong", expression
     else:
         postfix_expression = PostfixExpression(expression)
+        interpreted_expression = postfix_expression.interpreted_expression
         if postfix_expression.error_msg is not None:
             pos = postfix_expression.error_place
-            return pos[0], pos[1], postfix_expression.error_msg, postfix_expression.interpreted_expression
+            return pos[0], pos[1], postfix_expression.error_msg, interpreted_expression
         else:
             varname = ""
             polynomial = postfix_expression.result.polynomial
@@ -76,14 +80,14 @@ def evaluate_infix(expression):
                    "has a '=' sign. It cannot be interpreted.", expression
         # Formatting the result
         num_result = result[0] if math.floor(result[0]) != result[0] else math.floor(result[0])
-        return None, None, str(num_result), expression
+        return None, None, str(num_result), interpreted_expression
     else:
         if '=' not in expression:
             return -1, -1, "The expression has variables but doesn't have '=' sign." + \
                    "Should it be treated as equation?", expression
         # Formatting the result
-        num_result = result[0] if math.floor(result[0]) != result[0] else result[0]
-        return None, None, varname + ' = ' + str(num_result), expression
+        num_result = result[0] if math.floor(result[0]) != result[0] else math.floor(result[0])
+        return None, None, varname + ' = ' + str(num_result), interpreted_expression
 
 if __name__ == '__main__':
     import argparse

@@ -14,7 +14,7 @@ class PostfixExpression:
         self.functions = {"log": lambda x, y: y.log(x),
                           "ln": lambda x: x.log(Operand([math.e]))}
 
-        self.interpreted_expression = None
+        self.interpreted_expression = ""
         self.token_places = []  # An array of tuples (start_pos, end_pos) of tokens.
         self.error_msg = None    # Last error in case of incorrect expression
         self.error_place = (None, None)  # Index of incorrect token
