@@ -60,12 +60,18 @@ class Operand:
         dividend = Operand(self.polynomial)
         result = []
         while len(dividend.polynomial) > len(other.polynomial):
-            coef = dividend.polynomial[-1] / other.polynomial[-1]
+            try:
+                coef = dividend.polynomial[-1] / other.polynomial[-1]
+            except ZeroDivisionError:
+                raise ZeroDivisionError("Error: division by zero.")
             result += [coef]
             dividend -= Operand([coef]) * other * Operand([0] *
                                                           (len(dividend.polynomial) - len(other.polynomial)) + [1])
 
-        coef = dividend.polynomial[-1] / other.polynomial[-1]
+        try:
+            coef = dividend.polynomial[-1] / other.polynomial[-1]
+        except ZeroDivisionError:
+            raise ZeroDivisionError("Error: division by zero.")
         result += [coef]
 
         result = result[::-1]
